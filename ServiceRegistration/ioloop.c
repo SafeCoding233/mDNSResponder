@@ -1093,6 +1093,12 @@ listen_callback(io_t *io, void *context)
     comm->datagram_callback = listener->datagram_callback;
     comm->tcp_stream = true;
     comm->context = listener->context;
+    if (comm->name == NULL) {
+        ERROR("Out of memory");
+        close(comm->io.fd);
+        free(comm);
+        return;
+    }
 
     if (listener->tls_context == (tls_context_t *)-1) {
 #ifndef EXCLUDE_TLS

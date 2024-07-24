@@ -872,6 +872,11 @@ ioloop_udp_receive(comm_t *listener, dispatch_data_t content, nw_content_context
         response_state->connection_ready = true;
         const char *identifier = nw_content_context_get_identifier(context);
         response_state->name = strdup(identifier);
+        if (response_state->name == NULL) {
+            ERROR("%p: " PRI_S_SRP ": no memory for response state name.", listener, listener->name);
+            RELEASE_HERE(response_state, comm);
+            return;
+        }
         proceed = datagram_read(response_state, dispatch_data_get_size(content), content, NULL);
         RELEASE_HERE(response_state, comm);
     }
@@ -903,6 +908,11 @@ connection_callback(comm_t *listener, nw_connection_t new_connection)
     } else {
         ERROR("Unable to get description of new connection.");
         connection->name = strdup("unidentified");
+        if (connection->name == NULL) {
+            ERROR("out of memory");
+            nw_connection_cancel(connection->connection);
+            return;
+        }
     }
 
     connection->datagram_callback = listener->datagram_callback;
@@ -1537,6 +1547,13 @@ ioloop_connection_create(addr_t *NONNULL remote_address, bool tls, bool stream, 
     nw_release(protocol_stack);
 
     connection->name = strdup(addrbuf);
+    if (connection->name == NULL) {
+        ERROR("No memory for connection name.");
+        nw_release(endpoint);
+        nw_release(parameters);
+        RELEASE_HERE(connection, comm);
+        return NULL;
+    }
 
     // Create the nw_connection_t.
     connection->connection = nw_connection_create(endpoint, parameters);
